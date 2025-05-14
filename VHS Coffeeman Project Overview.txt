@@ -1,0 +1,212 @@
+# VHS Coffeeman - Creative Project Documentation
+
+## What Is It?
+
+VHS Coffeeman is an interactive art installation that dispenses cocktails through a modified VHS player. When a participant swipes an RFID card, the VHS player appears to "play" a tape while it mixes their drink through a series of pumps.
+
+## Current System
+
+### What Works Now
+- VCR housing contains an RFID reader, an RP2040 microcontroller, and an ATmega328 running GRBL
+- VHS tapes have RFID tags that trigger hardcoded drink recipes
+- System controls up to 10 peristaltic pumps driven by stepper motors
+- The RP2040 automatically controls the VCR's play and eject buttons through optoisolators
+- The entire experience is automated - users only need to insert the VHS tape
+
+### How It Works
+1. User inserts a VHS tape that has an RFID tag attached to it
+2. RP2040 reads the RFID tag via MFRC522 reader
+3. Tag ID is matched with a hardcoded drink recipe
+4. RP2040 automatically triggers the VCR play button (via optoisolator)
+5. After a delay, ingredients are dispensed:
+   - Each pump is activated one at a time
+   - RP2040 enables a specific pump's stepper driver
+   - GRBL controller moves the stepper a calculated distance
+   - This process repeats for each ingredient
+6. RP2040 automatically triggers the VCR eject button when complete
+
+### Current Code Structure
+- `vhs_coffeeman.py`: Main program that orchestrates everything
+- `mfrc522.py`: Driver code for the RFID reader
+- Drink recipes stored as tuples: `[(pump_index, volume_in_oz), ...]`
+- Pumps dispensing rate calibrated at 100mm movement per fluid ounce
+
+## Creative Vision
+
+VHS Coffeeman reimagines obsolete technology as a portal for social interaction and sensory experience. The familiar ritual of playing a VHS tape is transformed into a cocktail-making performance, creating a playful intersection of nostalgia and functionality.
+
+## New System Architecture
+
+### Planned Changes
+- Add a Raspberry Pi to the system for:
+  - RFID tag reading (moving this job from the RP2040)
+  - Storing drink recipes in editable files (accessible via SSH)
+  - Playing curated film clips that match each VHS tape's theme
+  - Communicating with the RP2040 via serial connection
+
+- The RP2040 will continue to:
+  - Interface with the GRBL controller
+  - Control the pump multiplexing
+  - Trigger the VCR's physical play/eject buttons
+
+### New Operation Sequence
+1. User inserts a VHS tape with an RFID tag
+2. Raspberry Pi reads the RFID tag
+3. Pi looks up the corresponding drink recipe from file storage
+4. Pi queues a random clip from a selection of iconic moments from the film
+5. Pi starts a timer to delay the clip (syncing with VCR mechanism)
+6. Pi sends drink recipe to RP2040 over serial connection
+7. RP2040 triggers the VCR play button (for authentic VCR sounds)
+8. RP2040 begins dispensing the drink via pumps
+9. When dispensing completes, RP2040 notifies the Pi
+10. Pi stops the film clip
+11. RP2040 triggers the eject button
+12. Sequence completes
+
+## Software Development Plan
+
+### Raspberry Pi Software Needs
+1. **RFID Reading System**
+   - Interface with MFRC522 RFID reader
+   - Quick, reliable tag detection
+
+2. **Recipe Management**
+   - JSON or YAML format for drink recipes
+   - File structure for easy editing via SSH
+
+3. **Media Management**
+   - Organization system for film clips
+   - Random selection from curated highlights
+   - Video playback with timing controls
+
+4. **Serial Communication**
+   - Protocol for sending recipes to RP2040
+   - Status message handling from RP2040
+   - Error handling and retry logic
+
+### RP2040 Software Needs
+1. **Serial Protocol Implementation**
+   - Receive and parse drink recipes from Pi
+   - Send status updates to Pi
+   - Command acknowledgment
+
+2. **Drink Dispensing Logic**
+   - Refactored for dynamic recipes (not hardcoded)
+   - Improved timing control
+
+3. **Error Handling**
+   - Detection and recovery from common failures
+   - Status reporting
+
+## Implementation Details
+
+### Data Storage
+- **Recipe Format**: JSON for drink recipes
+  ```json
+  {
+    "drink_name": "Joe Cool",
+    "rfid_id": 1101166614,
+    "ingredients": [
+      {"pump": 0, "amount": 1.5},
+      {"pump": 3, "amount": 1.1},
+      {"pump": 4, "amount": 1.6},
+      {"pump": 2, "amount": 2.0},
+      {"pump": 1, "amount": 1.0}
+    ]
+  }
+  ```
+- **Media Organization**: Directory structure for film clips, organized by film/tape ID
+
+### Communication Protocol
+- **Pi to RP2040**: Simple text-based commands for easy debugging
+  - Example: `RECIPE:1101166614,0:1.5,3:1.1,4:1.6,2:2.0,1:1.0`
+  - Example: `START_POUR`
+  - Example: `STOP`
+
+- **RP2040 to Pi**: Status messages
+  - Example: `READY`
+  - Example: `POURING:1`
+  - Example: `COMPLETE`
+  - Example: `ERROR:message`
+
+### Video System
+- Simple video playback over composite video pins
+- Clean black screen when not playing clips (no desktop visible)
+- Clean transitions between clips and black screen
+
+### Security
+- Basic password authentication for SSH access
+- No need for complex user management
+
+## Development Timeline (2-Month Plan)
+
+### Week 1-2: Core Infrastructure
+- Set up Raspberry Pi with required libraries
+- Implement basic RFID reading on Pi
+- Develop JSON recipe storage system
+- Establish serial communication between Pi and RP2040
+- Test basic commands and responses
+
+### Week 3-4: Primary Functionality
+- Implement recipe transmission and parsing
+- Refactor RP2040 code for dynamic recipes
+- Set up basic video playback system
+- Create simple file structure for clips
+- Test end-to-end drink pouring with new system
+
+### Week 5-6: Integration & Testing
+- Implement timing coordination between video and drink pouring
+- Add status reporting between devices
+- Create recipe management tools
+- Test various scenarios and edge cases
+- Add basic error handling
+
+### Week 7-8: Refinement & Presentation
+- Polish video transitions and timing
+- Fine-tune drink pouring accuracy
+- Create documentation for maintenance
+- Final testing and debugging
+- Prepare for installation/presentation
+
+## Measuring Success
+
+The project will be considered successful when:
+
+1. The system reliably reads RFID tags from VHS tapes
+2. Appropriate film clips play during drink pouring
+3. Drinks are accurately dispensed according to recipes
+4. The mechanical VCR actions sync appropriately with the digital experience
+5. Recipes can be easily modified via SSH
+
+## Maintenance Utilities
+
+### Pump Maintenance Requirements
+- **Cleaning**: Run pumps backward to return ingredients to containers
+- **Flushing**: Run pumps forward with warm water to clean lines
+- **Priming**: Run pumps until liquid reaches dispensing end
+- **Manual Control**: Ability to directly control individual pumps
+
+### Implementation Approach - Command Line Tools
+- SSH into the Raspberry Pi to access maintenance commands
+- Command syntax for pump control:
+  ```
+  pump <number> <direction> <amount>
+  ```
+  - Examples:
+    - `pump 3 forward 100` (100mm movement)
+    - `pump 2 backward 50` (50mm movement)
+    - `pump all forward 10` (all pumps 10mm)
+
+- Predefined maintenance scripts:
+  - `prime_all.sh`: Runs each pump forward a calculated line volume
+  - `prime_line.sh <pump_num>`: Primes a specific line
+  - `clean_all.sh`: Runs all pumps backward to empty lines
+  - `flush_system.sh`: Runs warm water through all lines
+
+- Serial command format for maintenance operations:
+  - `MAINTENANCE:PRIME_ALL`
+  - `MAINTENANCE:CLEAN_ALL`
+  - `MAINTENANCE:PUMP:3:FORWARD:100`
+
+### Future Extension
+- If needed, physical buttons can be added later to trigger these same commands
