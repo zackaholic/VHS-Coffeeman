@@ -1,0 +1,1 @@
+"""Recipe management for VHS Coffeeman."""

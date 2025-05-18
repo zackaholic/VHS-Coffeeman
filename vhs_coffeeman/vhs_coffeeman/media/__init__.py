@@ -1,0 +1,1 @@
+"""Media playback functionality for VHS Coffeeman."""

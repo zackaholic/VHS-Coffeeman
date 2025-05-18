@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vhs_coffeeman"
+version = "0.1.0"
+description = "Interactive art installation that dispenses cocktails through a modified VHS player"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = [
+    "pyserial>=3.5",
+    "pyyaml>=6.0",
+    "RPi.GPIO>=0.7.0",
+    "mfrc522-python>=0.0.4",  # For RFID reader
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.10.0",
+    "pylint>=2.15.0",
+]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111", # missing-docstring
+    "C0103", # invalid-name
+    "C0330", # bad-continuation
+    "C0326", # bad-whitespace
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
