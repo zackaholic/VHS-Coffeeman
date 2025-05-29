@@ -66,6 +66,17 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - Basic implementation started
   - Need to complete all state transitions and handlers
 
+## Testing Progress
+
+- [x] **GRBL Interface Testing**
+  - GRBL controller communication verified on /dev/ttyUSB0
+  - GRBL v1.1h responding correctly to commands
+  - Connection and basic command functionality confirmed
+
+- [x] **GPIO Testing**
+  - VCR button control pins tested
+  - Pump control pins verified
+
 ## Remaining Tasks
 
 - [ ] **Main Application**

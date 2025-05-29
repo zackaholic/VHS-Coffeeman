@@ -27,7 +27,7 @@ class Constants:
     # SERIAL_PORT = "/dev/ttyS0"  # UART port
     # SERIAL_BAUDRATE = 115200
     GRBL_BAUDRATE = 115200
-    GRBL_PORT = "/dev/ttyS0"  # Hardware UART for GRBL
+    GRBL_PORT = "/dev/ttyUSB0"  # USB serial for GRBL
     GRBL_TIMEOUT = 5.0  # seconds
 
     # RFID
