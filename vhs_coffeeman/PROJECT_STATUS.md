@@ -65,6 +65,12 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
 - [ ] **State Machine**
   - Basic implementation started
   - Need to complete all state transitions and handlers
+  - Need to implement full drink dispensing workflow
+
+- [ ] **Cup Sensor Integration**
+  - VCNL4010 proximity sensor module created
+  - Hardware testing completed
+  - Need integration with main state machine
 
 ## Testing Progress
 
@@ -72,17 +78,58 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - GRBL controller communication verified on /dev/ttyUSB0
   - GRBL v1.1h responding correctly to commands
   - Connection and basic command functionality confirmed
+  - Motor movement commands tested and working
 
 - [x] **GPIO Testing**
-  - VCR button control pins tested
-  - Pump control pins verified
+  - VCR button control pins tested and working
+  - Pump control pins verified and working
+
+- [x] **RFID Testing**
+  - RFID reader initialization and communication verified
+  - Tag reading functionality tested and working
+  - Fixed initialization issues with SimpleMFRC522
+
+- [x] **Pump Control Testing**
+  - Individual pump control tested and working
+  - Motor control integration verified
+  - Pump sequencing functionality confirmed
+
+- [x] **VCR Control Testing**
+  - Play and eject button control tested and working
+  - GPIO control for VCR buttons verified
+
+- [x] **Cup Sensor Testing**
+  - VCNL4010 proximity sensor integrated and tested
+  - Cup detection at 15-30mm range working
+  - Calibration functionality implemented
 
 ## Remaining Tasks
+
+- [ ] **LED Control System**
+  - Design and implement LED strip control for visual feedback
+  - Add LED configuration to hardware setup
+  - Create test scripts for LED functionality
 
 - [ ] **Main Application**
   - Create main application entry point
   - Implement event loop
   - Integrate all components
+
+- [ ] **State Machine Implementation**
+  - Complete state machine with full drink dispensing workflow:
+    1. Wait for RFID tag detection
+    2. Match tag ID with drink recipe
+    3. Check cup sensor for safe pour condition
+    4. Load and validate drink recipe
+    5. Send movement commands to GRBL controller
+    6. Monitor pour completion
+    7. Trigger VCR eject button
+    8. Return to waiting state
+
+- [ ] **Dry Pour Testing**
+  - Test complete drink dispensing sequence without liquids
+  - Validate timing and coordination between components
+  - Test error handling and recovery scenarios
 
 - [ ] **Maintenance Utilities**
   - Create command-line maintenance tools
@@ -92,11 +139,13 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - Connect RFID reading to recipe lookup
   - Connect recipe execution to pump control
   - Synchronize video playback with drink dispensing
+  - Integrate cup sensor safety checks
 
 - [ ] **Testing and Calibration**
   - Test all components together
   - Calibrate pump dispensing accuracy
   - Tune timing for synchronization
+  - Test complete user workflow
 
 - [ ] **Documentation**
   - Create installation instructions
@@ -123,10 +172,24 @@ We're following a component-first testing approach:
 
 ## Next Steps
 
-1. Validate hardware interfaces with actual hardware
-2. Complete the main application entry point
-3. Implement the event loop and state transitions
-4. Test full integration with a complete drink dispensing cycle
+1. **Implement LED Control System**
+   - Add LED strip control for visual feedback during operation
+   - Create configuration and test scripts
+
+2. **Complete State Machine Implementation**
+   - Implement the full drink dispensing workflow
+   - Add proper error handling and state transitions
+   - Integrate all tested hardware components
+
+3. **Dry Pour Testing**
+   - Test complete sequence: RFID → recipe lookup → cup detection → recipe execution → VCR eject → reset
+   - Validate timing and component coordination
+   - Test error scenarios and recovery
+
+4. **Integration and Refinement**
+   - Connect all components into unified system
+   - Calibrate dispensing accuracy
+   - Optimize user experience flow
 
 ## Timeline
 

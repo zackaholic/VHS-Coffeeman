@@ -15,34 +15,27 @@ import time
 from mfrc522 import SimpleMFRC522
 import RPi.GPIO as GPIO
 
+reader = SimpleMFRC522()
+
 def read_tags(timeout=None):
     """Continuously read RFID tags until timeout or interrupted."""
-    reader = SimpleMFRC522()
-    print("RFID Reader initialized. Waiting for tags...")
+    print("RFID Reader initialized. Place tag near reader to scan...")
     
     try:
-        start_time = time.time()
+        print("Waiting for RFID tag... (Press Ctrl+C to stop)")
+        id, text = reader.read()
+        print(f"\nTag detected!")
+        print(f"ID: {id}")
+        print(f"Text: {text}")
+        print("Remove tag and place again to scan another, or press Ctrl+C to exit")
+        
+        # Continue reading for additional tags
         while True:
-            # Check timeout
-            if timeout and (time.time() - start_time) > timeout:
-                print(f"\nTimeout after {timeout} seconds")
-                break
-            
-            print("\rScanning for tag... (Press Ctrl+C to stop)", end="")
-            try:
-                # Non-blocking read
-                id, text = reader.read_no_block()
-                if id:
-                    print(f"\nTag detected!")
-                    print(f"ID: {id}")
-                    print(f"Text: {text}")
-                    print("\nContinuing to scan... (Press Ctrl+C to stop)")
-                    # Reset the start time when a tag is found
-                    start_time = time.time() 
-            except Exception as e:
-                print(f"\nError reading tag: {e}")
-            
-            time.sleep(0.1)
+            print("\nWaiting for next tag... (Press Ctrl+C to stop)")
+            id, text = reader.read()
+            print(f"\nTag detected!")
+            print(f"ID: {id}")
+            print(f"Text: {text}")
     
     except KeyboardInterrupt:
         print("\nScan stopped by user")
@@ -52,7 +45,6 @@ def read_tags(timeout=None):
 
 def write_tag():
     """Write data to an RFID tag."""
-    reader = SimpleMFRC522()
     print("RFID Writer initialized.")
     
     try:

@@ -27,7 +27,7 @@ class PumpController:
         GPIO.setmode(GPIO.BCM)
         for pin in Pins.PUMP_ENABLE:
             GPIO.setup(pin, GPIO.OUT)
-            GPIO.output(pin, GPIO.LOW)  # Disable all pumps initially
+            GPIO.output(pin, GPIO.HIGH)  # Disable all pumps initially (inverse logic)
             
         logger.info(f"Initialized {self.num_pumps} pump controllers")
     
@@ -46,8 +46,8 @@ class PumpController:
         # Disable any currently active pump
         self.disable_all_pumps()
         
-        # Enable the specified pump
-        GPIO.output(Pins.PUMP_ENABLE[pump_index], GPIO.HIGH)
+        # Enable the specified pump (inverse logic: LOW = enable)
+        GPIO.output(Pins.PUMP_ENABLE[pump_index], GPIO.LOW)
         self.current_pump = pump_index
         logger.debug(f"Enabled pump {pump_index}")
         return True
@@ -64,7 +64,7 @@ class PumpController:
         if not self._validate_pump_index(pump_index):
             return False
         
-        GPIO.output(Pins.PUMP_ENABLE[pump_index], GPIO.LOW)
+        GPIO.output(Pins.PUMP_ENABLE[pump_index], GPIO.HIGH)  # Disable (inverse logic: HIGH = disable)
         if self.current_pump == pump_index:
             self.current_pump = None
         logger.debug(f"Disabled pump {pump_index}")
@@ -73,7 +73,7 @@ class PumpController:
     def disable_all_pumps(self):
         """Disable all pumps."""
         for i in range(self.num_pumps):
-            GPIO.output(Pins.PUMP_ENABLE[i], GPIO.LOW)
+            GPIO.output(Pins.PUMP_ENABLE[i], GPIO.HIGH)  # Disable (inverse logic: HIGH = disable)
         self.current_pump = None
         logger.debug("Disabled all pumps")
     
@@ -166,6 +166,20 @@ class PumpController:
             return False
         return True
     
+    def cleanup(self):
+        """Explicitly clean up GPIO resources."""
+        try:
+            self.disable_all_pumps()
+            logger.info("Pump controller cleanup completed")
+        except Exception as e:
+            logger.warning(f"Error during pump controller cleanup: {e}")
+    
     def __del__(self):
         """Clean up resources when deleted."""
-        self.disable_all_pumps()
+        try:
+            # Only try to disable pumps if GPIO is still available
+            if hasattr(GPIO, 'setmode'):
+                self.disable_all_pumps()
+        except (RuntimeError, AttributeError):
+            # GPIO may have already been cleaned up, ignore errors
+            pass

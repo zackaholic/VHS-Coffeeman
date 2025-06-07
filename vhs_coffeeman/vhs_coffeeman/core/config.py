@@ -12,6 +12,10 @@ class Pins:
         6, 13, 19, 26, 21   # Pumps 5-9
     ]
 
+    # Cup sensor pins (VCNL4010 proximity sensor)
+    VCNL4010_SDA = 2   # I2C SDA pin
+    VCNL4010_SCL = 3   # I2C SCL pin
+
 class Constants:
     """System constants."""
     # Pump calibration: 100mm movement per fluid ounce
@@ -34,6 +38,12 @@ class Constants:
     MFRC522_SPI_BUS = 0
     MFRC522_SPI_DEVICE = 0
     MFRC522_RESET_PIN = 25
+
+    # Cup sensor (VCNL4010 proximity sensor)
+    # Threshold for cup presence detection (values above this indicate cup present)
+    # Note: VCNL4010 returns higher values for closer objects
+    # Typical range: 0-65535, adjust based on testing at 15-30mm distance
+    VCNL4010_THRESHOLD = 3300  # Default threshold, tune based on testing
 
 class States:
     """System states."""

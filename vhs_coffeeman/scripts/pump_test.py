@@ -24,6 +24,10 @@ from vhs_coffeeman.hardware.grbl_interface import GrblInterface
 from vhs_coffeeman.hardware.pump_controller import PumpController
 from vhs_coffeeman.core.config import Pins, Constants
 
+# Set GPIO mode at the start
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
 def setup():
     """Set up GRBL and pump controller."""
     print("Initializing GRBL interface...")
@@ -153,6 +157,7 @@ def main():
             print_usage()
         
         # Clean up
+        pump_ctrl.cleanup()
         grbl.disconnect()
         
     except ValueError:

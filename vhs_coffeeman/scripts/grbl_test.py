@@ -19,6 +19,10 @@ import RPi.GPIO as GPIO
 from vhs_coffeeman.hardware.grbl_interface import GrblInterface
 from vhs_coffeeman.core.config import Pins, Constants
 
+# Set GPIO mode at the start
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
 def test_connection():
     """Test connection to GRBL controller."""
     print("Testing connection to GRBL controller...")
