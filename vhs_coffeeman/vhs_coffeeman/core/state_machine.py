@@ -317,17 +317,14 @@ class StateMachine:
         try:
             self._debug_log(f"Loading recipe for tag: {tag_id}")
             
-            # TODO: Implement recipe lookup from JSON files
-            # For now, create a dummy recipe
-            recipe_data = {
-                "name": f"Test Recipe {tag_id}",
-                "tag_id": tag_id,
-                "ingredients": [
-                    {"pump": 0, "amount": 1.0},
-                    {"pump": 1, "amount": 0.5}
-                ]
-            }
+            # Get recipe from the recipe loader
+            recipe_data = self.hardware.get_recipe_by_tag(tag_id)
             
+            if not recipe_data:
+                logger.error(f"No recipe found for tag: {tag_id}")
+                return False
+            
+            # Validate the recipe
             success = self.hardware.load_recipe(recipe_data)
             
             if success:
@@ -336,7 +333,7 @@ class StateMachine:
                 logger.info(f"Recipe loaded successfully: {recipe_data['name']}")
                 return True
             else:
-                logger.error("Failed to load recipe")
+                logger.error("Failed to validate recipe")
                 return False
                 
         except Exception as e:

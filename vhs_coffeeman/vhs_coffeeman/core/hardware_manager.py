@@ -39,6 +39,7 @@ from hardware.grbl_interface import GRBLInterface
 from hardware.pump_controller import PumpController
 from hardware.vcr_controller import VCRController
 from media.video_player import VideoPlayer
+from recipes.recipe_loader import BasicRecipeLoader
 
 logger = get_logger(__name__)
 
@@ -57,6 +58,7 @@ class HardwareManager:
         self.pump_controller = PumpController(self.grbl_interface)
         self.vcr_controller = VCRController()
         self.video_player = VideoPlayer()
+        self.recipe_loader = BasicRecipeLoader()
         
         # Event callbacks
         self.rfid_callback: Optional[Callable[[str], None]] = None
@@ -186,14 +188,36 @@ class HardwareManager:
         """Check if cup is currently present."""
         return self._cup_present
     
+    def get_recipe_by_tag(self, tag_id: str) -> Optional[Dict[str, Any]]:
+        """Get a recipe by RFID tag ID."""
+        try:
+            logger.info(f"Looking up recipe for tag: {tag_id}")
+            recipe = self.recipe_loader.get_recipe_by_tag(tag_id)
+            
+            if recipe:
+                logger.info(f"Found recipe: {recipe['name']}")
+            else:
+                logger.warning(f"No recipe found for tag: {tag_id}")
+            
+            return recipe
+            
+        except Exception as e:
+            logger.error(f"Error getting recipe for tag {tag_id}: {e}")
+            return None
+    
     def load_recipe(self, recipe_data: Dict[str, Any]) -> bool:
         """Load a recipe for dispensing."""
         try:
             logger.info(f"Loading recipe: {recipe_data.get('name', 'Unknown')}")
-            # Recipe loading logic would go here
-            # For now, just validate the format
+            
+            # Basic validation
             if 'ingredients' not in recipe_data:
                 logger.error("Recipe missing ingredients")
+                return False
+            
+            ingredients = recipe_data['ingredients']
+            if not isinstance(ingredients, list) or len(ingredients) == 0:
+                logger.error("Recipe has no ingredients")
                 return False
             
             logger.info("Recipe loaded successfully")
