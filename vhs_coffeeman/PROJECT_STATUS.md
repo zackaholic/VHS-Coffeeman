@@ -69,11 +69,11 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - Comprehensive logging setup
 
 - [x] **Recipe Management**
-  - Implemented format-agnostic recipe loader interface
-  - Created basic file-based recipe system with JSON support
-  - Added caching system for performance optimization
-  - Fallback recipe system for testing (NOTE: Remove once real recipes are implemented)
-  - Automatic directory creation and default recipe generation
+  - Implemented three-file JSON recipe system for human-friendly management
+  - Created tapes.json (RFID → movie), ingredients.json (ingredient → pump), recipes.json (movie → recipe)
+  - Added recipe validation and translation pipeline
+  - Backward compatibility with existing hardware interfaces
+  - Sample recipes created for testing (Taxi Driver, Blade Runner, The Big Lebowski, Casablanca)
 
 - [x] **Media Playback**
   - Complete video player module with tag-based media coordination
@@ -85,6 +85,14 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - VCNL4010 proximity sensor module created
   - Hardware testing completed
   - Full integration with main state machine and safety logic
+
+- [x] **RFID Tape Registration System**
+  - Complete interactive tape registration tool (scripts/register_tape.py)
+  - Automatic VCR eject after successful registration with 3-second delay
+  - Movie title sanitization and duplicate detection
+  - Command-line options: --list, --no-eject, --help
+  - Clean user interface without console logging spam
+  - GPIO mode conflict resolution between RFID reader and VCR controller
 
 ## In Progress
 
@@ -114,6 +122,7 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - Individual pump control tested and working
   - Motor control integration verified
   - Pump sequencing functionality confirmed
+  - Added missing execute_recipe() method for complete recipe dispensing
 
 - [x] **VCR Control Testing**
   - Play and eject button control tested and working
@@ -126,21 +135,22 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
 
 ## Remaining Tasks
 
-- [ ] **Recipe Format Definition**
-  - Define final recipe JSON schema and structure
-  - Remove fallback recipe system once real recipes are implemented
-  - Create actual recipe files for VHS tape collection
+- [ ] **🎯 NEXT MILESTONE: Dry Pour Testing** 
+  - Test complete drink dispensing sequence without liquids
+  - Validate timing and coordination between components
+  - Test error handling and recovery scenarios
+  - Test full state machine workflow: RFID → recipe lookup → cup detection → recipe execution → VCR eject → reset
+  - **This is the next major milestone before liquid testing**
 
 - [ ] **LED Control System Implementation**
   - Implement actual LED hardware control (placeholder functions exist)
   - Add LED configuration to hardware setup
   - Create test scripts for LED functionality
 
-- [ ] **Dry Pour Testing**
-  - Test complete drink dispensing sequence without liquids
-  - Validate timing and coordination between components
-  - Test error handling and recovery scenarios
-  - Test full state machine workflow: RFID → recipe lookup → cup detection → recipe execution → VCR eject → reset
+- [ ] **Video Playback Integration**
+  - Test video player with actual media files
+  - Coordinate video playback timing with drink dispensing
+  - Implement media file organization and selection
 
 - [ ] **Maintenance Utilities**
   - Create command-line maintenance tools
@@ -202,18 +212,31 @@ We're following a component-first testing approach:
 - **Phase 1 (Completed)**: Set up project structure and port core modules
 - **Phase 2 (Completed)**: Complete individual component implementation and testing  
 - **Phase 3 (Completed)**: Implement main application and integration
-- **Phase 4 (Current)**: Testing, calibration, and refinement
-- **Phase 5**: Documentation and final deployment
+- **Phase 4 (Completed)**: Recipe system and tape registration tools
+- **Phase 5 (Current)**: System integration testing and dry runs
+- **Phase 6**: Video playback integration and final calibration
+- **Phase 7**: Documentation and deployment
 
-## Major Milestone: Core System Complete
+## Major Milestone: Production-Ready Recipe System
 
-The VHS Coffeeman system now has a complete, functional core implementation:
+The VHS Coffeeman system now has a complete, production-ready implementation:
 
 - ✅ **Full state machine** with event-driven workflow
 - ✅ **Hardware abstraction** for all components  
-- ✅ **Recipe system** with format-agnostic interface
-- ✅ **Media coordination** with video playback
+- ✅ **Three-file recipe system** with human-friendly management
+- ✅ **RFID tape registration tool** with automatic VCR eject
+- ✅ **Media coordination** with video playback framework
 - ✅ **Safety systems** including cup sensor monitoring
-- ✅ **Main application** ready for deployment
+- ✅ **GPIO conflict resolution** between RFID and VCR hardware
+- ✅ **Complete recipe pipeline** from tag detection to pump control
 
-The system is ready for integration testing and refinement. The primary remaining work involves defining the final recipe format, implementing LED control hardware, and comprehensive testing of the complete user workflow.
+## 🎯 Next Major Milestone: Dry Run Testing
+
+The system is ready for **comprehensive dry run testing** - the final validation before adding liquids:
+
+- **Complete workflow testing**: RFID detection → recipe loading → cup detection → pump sequencing → VCR eject
+- **Timing validation**: Ensure all components coordinate properly
+- **Error handling**: Test safety systems and recovery scenarios
+- **User experience**: Validate the complete interaction flow
+
+After successful dry runs, the focus will shift to **video playback integration** and final system calibration.
