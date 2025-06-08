@@ -32,9 +32,10 @@ Usage:
 import time
 import threading
 from typing import Callable, Optional, Dict, Any, List, Tuple
+import RPi.GPIO as GPIO
 from utils.logger import setup_logger
 from hardware.rfid_reader import RFIDReader
-from hardware.cup_sensor import CupSensor
+from hardware.cup_sensor import CupSensor, MockCupSensor
 from hardware.grbl_interface import GRBLInterface
 from hardware.pump_controller import PumpController
 from hardware.vcr_controller import VCRController
@@ -51,9 +52,27 @@ class HardwareManager:
         """Initialize the hardware manager and all components."""
         logger.info("Initializing Hardware Manager")
         
+        # Set GPIO mode globally before initializing any components
+        # Disable warnings for pins already in use
+        GPIO.setwarnings(False)
+        try:
+            GPIO.setmode(GPIO.BCM)
+            logger.debug("Set GPIO mode to BCM")
+        except Exception as e:
+            logger.warning(f"GPIO mode already set: {e}")
+        
         # Initialize hardware components
         self.rfid_reader = RFIDReader()
-        self.cup_sensor = CupSensor()
+        
+        # Try to initialize cup sensor, use mock if it fails
+        try:
+            self.cup_sensor = CupSensor()
+            self._cup_sensor_available = True
+        except Exception as e:
+            logger.warning(f"Cup sensor initialization failed, using mock sensor for dry run: {e}")
+            self.cup_sensor = MockCupSensor()
+            self._cup_sensor_available = False
+        
         self.grbl_interface = GRBLInterface()
         self.pump_controller = PumpController(self.grbl_interface)
         self.vcr_controller = VCRController()
@@ -66,6 +85,10 @@ class HardwareManager:
         self.cup_removed_callback: Optional[Callable[[], None]] = None
         self.pour_complete_callback: Optional[Callable[[], None]] = None
         
+        # State tracking for conditional polling
+        self.should_poll_rfid: bool = True
+        self.should_poll_cup_sensor: bool = False  # Only poll when needed
+        
         # Monitoring state
         self._monitoring = False
         self._monitor_thread: Optional[threading.Thread] = None
@@ -73,6 +96,7 @@ class HardwareManager:
         # Cup sensor state tracking
         self._cup_present = False
         self._last_cup_state = False
+        self._cup_sensor_consecutive_failures = 0
         
         # RFID state tracking
         self._last_rfid_tag = None
@@ -98,6 +122,26 @@ class HardwareManager:
         """Set callback for pour completion events."""
         self.pour_complete_callback = callback
         logger.debug("Pour complete callback set")
+    
+    def enable_rfid_polling(self):
+        """Enable RFID tag polling."""
+        self.should_poll_rfid = True
+        logger.debug("RFID polling enabled")
+    
+    def disable_rfid_polling(self):
+        """Disable RFID tag polling."""
+        self.should_poll_rfid = False
+        logger.debug("RFID polling disabled")
+    
+    def enable_cup_sensor_polling(self):
+        """Enable cup sensor polling."""
+        self.should_poll_cup_sensor = True
+        logger.debug("Cup sensor polling enabled")
+    
+    def disable_cup_sensor_polling(self):
+        """Disable cup sensor polling."""
+        self.should_poll_cup_sensor = False
+        logger.debug("Cup sensor polling disabled")
     
     def start_monitoring(self):
         """Start hardware monitoring in a separate thread."""
@@ -134,7 +178,7 @@ class HardwareManager:
                 self._check_cup_sensor()
                 
                 # Brief delay to prevent excessive polling
-                time.sleep(0.1)
+                time.sleep(0.2)  # Slower polling for sensor stability
                 
             except Exception as e:
                 logger.error(f"Error in hardware monitoring: {e}")
@@ -144,8 +188,12 @@ class HardwareManager:
     
     def _check_rfid(self):
         """Check for RFID tag detection."""
+        # Only poll RFID when we should be looking for new tags
+        if not self.should_poll_rfid:
+            return
+            
         try:
-            tag_id = self.rfid_reader.read_tag_id()
+            tag_id, text = self.rfid_reader.read_tag()
             
             # Only trigger callback on new tag detection
             if tag_id and tag_id != self._last_rfid_tag:
@@ -153,7 +201,7 @@ class HardwareManager:
                 self._last_rfid_tag = tag_id
                 
                 if self.rfid_callback:
-                    self.rfid_callback(tag_id)
+                    self.rfid_callback(str(tag_id))
             
             # Clear last tag if no tag present
             if not tag_id:
@@ -164,8 +212,15 @@ class HardwareManager:
     
     def _check_cup_sensor(self):
         """Check cup sensor for state changes."""
+        # Only poll cup sensor when we should be monitoring it
+        if not self.should_poll_cup_sensor:
+            return
+            
         try:
             cup_present = self.cup_sensor.is_cup_present()
+            
+            # Reset failure counter on successful read
+            self._cup_sensor_consecutive_failures = 0
             
             # Check for state change
             if cup_present != self._last_cup_state:
@@ -182,7 +237,17 @@ class HardwareManager:
             self._cup_present = cup_present
             
         except Exception as e:
-            logger.error(f"Error reading cup sensor: {e}")
+            self._cup_sensor_consecutive_failures += 1
+            
+            # Only log error after multiple consecutive failures
+            if self._cup_sensor_consecutive_failures >= 10:
+                logger.error(f"Cup sensor failed {self._cup_sensor_consecutive_failures} times in a row: {e}")
+                # Reset counter to avoid spam
+                self._cup_sensor_consecutive_failures = 0
+            elif self._cup_sensor_consecutive_failures == 1:
+                logger.debug(f"Cup sensor read failed (attempt 1/10): {e}")
+            elif self._cup_sensor_consecutive_failures == 5:
+                logger.warning(f"Cup sensor read failed 5 times in a row: {e}")
     
     def is_cup_present(self) -> bool:
         """Check if cup is currently present."""
@@ -286,7 +351,7 @@ class HardwareManager:
         """Emergency stop of current pour operation."""
         try:
             logger.warning("Emergency stop requested")
-            self.pump_controller.disable_all()
+            self.pump_controller.disable_all_pumps()
             logger.info("All pumps stopped")
             
         except Exception as e:
@@ -363,7 +428,7 @@ class HardwareManager:
         
         # Stop all pumps
         try:
-            self.pump_controller.disable_all()
+            self.pump_controller.disable_all_pumps()
         except Exception as e:
             logger.error(f"Error stopping pumps during cleanup: {e}")
         

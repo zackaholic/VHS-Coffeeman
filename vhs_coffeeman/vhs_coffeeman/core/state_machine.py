@@ -196,6 +196,12 @@ class StateMachine:
         self.current_tag_id = None
         self.media_playing = False
         
+        # Enable RFID polling when waiting for new tag
+        self.hardware.enable_rfid_polling()
+        
+        # Disable cup sensor polling - not needed in idle state
+        self.hardware.disable_cup_sensor_polling()
+        
         # Set attractor LEDs
         self.hardware.set_led_attractor()
         
@@ -204,6 +210,9 @@ class StateMachine:
     def _enter_recipe_loaded_state(self):
         """Actions when entering RECIPE_LOADED state."""
         self._debug_log("Entering RECIPE_LOADED state")
+        
+        # Disable RFID polling - we have our recipe
+        self.hardware.disable_rfid_polling()
         
         logger.info(f"Recipe loaded: {self.current_recipe.get('name', 'Unknown')}")
         
@@ -219,6 +228,9 @@ class StateMachine:
         """Actions when entering WAITING_FOR_CUP state."""
         self._debug_log("Entering WAITING_FOR_CUP state")
         
+        # Enable cup sensor polling - we need to monitor for cup placement
+        self.hardware.enable_cup_sensor_polling()
+        
         # Set red LEDs to indicate cup needed
         self.hardware.set_led_no_cup()
         
@@ -232,6 +244,9 @@ class StateMachine:
     def _enter_pouring_state(self):
         """Actions when entering POURING state."""
         self._debug_log("Entering POURING state")
+        
+        # Keep cup sensor polling enabled - monitor for cup removal during pour
+        # (already enabled from WAITING_FOR_CUP state)
         
         # Set white LEDs for pouring
         self.hardware.set_led_pouring()
@@ -266,6 +281,9 @@ class StateMachine:
     def _enter_drink_ready_state(self):
         """Actions when entering DRINK_READY state."""
         self._debug_log("Entering DRINK_READY state")
+        
+        # Keep cup sensor polling enabled - monitor for cup removal
+        # (already enabled from previous states)
         
         # Keep white LEDs on until cup is removed
         self.hardware.set_led_pouring()

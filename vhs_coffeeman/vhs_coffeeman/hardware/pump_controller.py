@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple, Optional, Any
 import RPi.GPIO as GPIO
 
 from vhs_coffeeman.core.config import Pins, Constants
-from vhs_coffeeman.hardware.grbl_interface import GrblInterface
+from vhs_coffeeman.hardware.grbl_interface import GRBLInterface
 from vhs_coffeeman.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -13,7 +13,7 @@ logger = setup_logger(__name__)
 class PumpController:
     """Controls multiple peristaltic pumps for ingredient dispensing."""
     
-    def __init__(self, grbl_interface: GrblInterface):
+    def __init__(self, grbl_interface: GRBLInterface):
         """Initialize the pump controller.
         
         Args:

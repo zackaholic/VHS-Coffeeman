@@ -10,7 +10,7 @@ from vhs_coffeeman.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-class GrblInterface:
+class GRBLInterface:
     """Interface for communicating with GRBL controller over UART."""
     
     def __init__(self):

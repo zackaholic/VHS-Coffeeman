@@ -57,6 +57,14 @@ class VCRController:
         time.sleep(Constants.VCR_BUTTON_RELEASE_TIME)
         logger.debug("VCR eject button pressed and released")
     
+    def eject(self):
+        """Eject the VCR tape."""
+        self.press_eject()
+    
+    def play(self):
+        """Play the VCR tape."""
+        self.press_play()
+    
     def __del__(self):
         """Clean up resources when deleted."""
         # Ensure buttons are not pressed

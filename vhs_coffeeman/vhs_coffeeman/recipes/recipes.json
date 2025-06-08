@@ -13,11 +13,13 @@
       "lime_juice": 0.25
     }
   },
-  "Blade Runner": {
+  "Money": {
     "ingredients": {
-      "whiskey": 2.0,
-      "orange_juice": 2.0,
-      "simple_syrup": 0.5
+      "vodka": 2.0,
+      "rum": 1.0,
+      "cranberry_juice": 0.5,
+      "orange_juice": 3.0,
+      "whiskey": 1.0
     }
   },
   "Casablanca": {

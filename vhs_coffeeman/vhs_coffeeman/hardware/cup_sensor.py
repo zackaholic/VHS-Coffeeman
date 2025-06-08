@@ -61,9 +61,13 @@ class CupSensor:
             
             # Check if sensor is present by reading product ID
             logger.info("Checking VCNL4010 sensor presence")
-            product_id = self.bus.read_byte_data(VCNL4010_I2C_ADDRESS, VCNL4010_PRODUCTID)
-            if product_id != 0x21:  # VCNL4010 product ID should be 0x21
-                raise RuntimeError(f"VCNL4010 not found. Got product ID: 0x{product_id:02x}, expected 0x21")
+            try:
+                product_id = self.bus.read_byte_data(VCNL4010_I2C_ADDRESS, VCNL4010_PRODUCTID)
+                if product_id != 0x21:  # VCNL4010 product ID should be 0x21
+                    raise RuntimeError(f"VCNL4010 not found. Got product ID: 0x{product_id:02x}, expected 0x21")
+            except OSError as e:
+                # I2C communication failed - sensor not connected or I2C issue
+                raise RuntimeError(f"Failed to communicate with VCNL4010 sensor on I2C address 0x{VCNL4010_I2C_ADDRESS:02x}: {e}")
             
             # Initialize sensor settings
             self._initialize_sensor()
@@ -92,8 +96,11 @@ class CupSensor:
         
         logger.debug("VCNL4010 sensor configured")
     
-    def _read_proximity(self) -> int:
+    def _read_proximity(self, timeout_ms: int = 50) -> int:
         """Read proximity value from the sensor.
+        
+        Args:
+            timeout_ms: Timeout in milliseconds for proximity measurement
         
         Returns:
             int: 16-bit proximity value (0-65535)
@@ -102,7 +109,7 @@ class CupSensor:
         self.bus.write_byte_data(VCNL4010_I2C_ADDRESS, VCNL4010_COMMAND, VCNL4010_MEASUREPROXIMITY)
         
         # Wait for measurement to complete
-        timeout = 50  # 50ms timeout
+        timeout = timeout_ms
         while timeout > 0:
             status = self.bus.read_byte_data(VCNL4010_I2C_ADDRESS, VCNL4010_COMMAND)
             if status & VCNL4010_PROXIMITYREADY:
@@ -271,3 +278,45 @@ class CupSensor:
                 self.bus.close()
             except:
                 pass
+
+
+class MockCupSensor:
+    """Mock cup sensor for testing when hardware is not available."""
+    
+    def __init__(self):
+        """Initialize mock sensor."""
+        self.threshold = Constants.VCNL4010_THRESHOLD
+        logger.info("Mock cup sensor initialized - assumes cup is always present")
+    
+    def is_cup_present(self) -> bool:
+        """Always return True for dry run testing."""
+        return True
+    
+    def get_proximity_value(self) -> Optional[int]:
+        """Return a mock proximity value above threshold."""
+        return self.threshold + 1000
+    
+    def wait_for_cup(self, timeout: Optional[float] = None) -> bool:
+        """Immediately return True (cup always present)."""
+        logger.info("Mock cup sensor: Cup assumed present")
+        return True
+    
+    def wait_for_cup_removal(self, timeout: Optional[float] = None) -> bool:
+        """Immediately return True (cup removal assumed)."""
+        logger.info("Mock cup sensor: Cup removal assumed")
+        return True
+    
+    def calibrate_threshold(self, samples: int = 10, delay: float = 0.5) -> dict:
+        """Return mock calibration data."""
+        return {
+            'readings': [self.threshold + 1000] * samples,
+            'min': self.threshold + 1000,
+            'max': self.threshold + 1000,
+            'average': self.threshold + 1000,
+            'count': samples,
+            'recommended_threshold': self.threshold
+        }
+    
+    def cleanup(self):
+        """No cleanup needed for mock sensor."""
+        pass

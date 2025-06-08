@@ -28,16 +28,8 @@ def setup_logger(name: str, level: Optional[int] = None, format_str: Optional[st
     # Set log level
     logger.setLevel(level or DEFAULT_LOG_LEVEL)
     
-    # Create handler for console output
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level or DEFAULT_LOG_LEVEL)
-    
-    # Create formatter
-    formatter = logging.Formatter(format_str or DEFAULT_LOG_FORMAT)
-    console_handler.setFormatter(formatter)
-    
-    # Add handler to logger
-    logger.addHandler(console_handler)
+    # Don't add handlers to module loggers - let them propagate to root logger
+    # This prevents duplicate logging when root logger is also configured
     
     return logger
 
@@ -75,3 +67,26 @@ def setup_root_logger(level: int = logging.INFO,
         root_logger.addHandler(file_handler)
     
     return root_logger
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Get a logger instance for the given name.
+    
+    Args:
+        name: Name of the logger, typically __name__
+        
+    Returns:
+        logging.Logger: Logger instance
+    """
+    return logging.getLogger(name)
+
+
+def setup_logging(debug: bool = False, log_file: Optional[str] = None) -> None:
+    """Setup application-wide logging configuration.
+    
+    Args:
+        debug: Enable debug logging level
+        log_file: Optional path to log file
+    """
+    level = logging.DEBUG if debug else logging.INFO
+    setup_root_logger(level=level, log_file=log_file)

@@ -19,7 +19,7 @@ class Pins:
 class Constants:
     """System constants."""
     # Pump calibration: 100mm movement per fluid ounce
-    MM_PER_OZ = 100.0
+    MM_PER_OZ = 20.0
 
     # Button press timing
     VCR_BUTTON_PRESS_TIME = 0.25  # seconds
@@ -32,7 +32,7 @@ class Constants:
     # SERIAL_BAUDRATE = 115200
     GRBL_BAUDRATE = 115200
     GRBL_PORT = "/dev/ttyUSB0"  # USB serial for GRBL
-    GRBL_TIMEOUT = 5.0  # seconds
+    GRBL_TIMEOUT = 30.0  # seconds - allow time for long pump movements
 
     # RFID
     MFRC522_SPI_BUS = 0
@@ -43,7 +43,7 @@ class Constants:
     # Threshold for cup presence detection (values above this indicate cup present)
     # Note: VCNL4010 returns higher values for closer objects
     # Typical range: 0-65535, adjust based on testing at 15-30mm distance
-    VCNL4010_THRESHOLD = 3300  # Default threshold, tune based on testing
+    VCNL4010_THRESHOLD = 2700  # Default threshold, tune based on testing
 
 class States:
     """System states."""
