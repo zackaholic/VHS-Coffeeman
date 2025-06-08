@@ -1,0 +1,30 @@
+{
+  "Taxi Driver": {
+    "ingredients": {
+      "vodka": 2.0,
+      "cranberry_juice": 1.0,
+      "lime_juice": 0.5
+    }
+  },
+  "The Big Lebowski": {
+    "ingredients": {
+      "rum": 1.5,
+      "cola": 4.0,
+      "lime_juice": 0.25
+    }
+  },
+  "Blade Runner": {
+    "ingredients": {
+      "whiskey": 2.0,
+      "orange_juice": 2.0,
+      "simple_syrup": 0.5
+    }
+  },
+  "Casablanca": {
+    "ingredients": {
+      "vodka": 1.5,
+      "orange_juice": 3.0,
+      "cranberry_juice": 1.0
+    }
+  }
+}

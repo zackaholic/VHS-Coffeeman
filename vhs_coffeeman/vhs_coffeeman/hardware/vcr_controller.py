@@ -14,7 +14,22 @@ class VCRController:
     
     def __init__(self):
         """Initialize VCR controller."""
-        GPIO.setmode(GPIO.BCM)
+        # Check what GPIO mode is currently set
+        current_mode = GPIO.getmode()
+        
+        if current_mode is None:
+            # No mode set yet, use BCM
+            GPIO.setmode(GPIO.BCM)
+            logger.debug("Set GPIO mode to BCM")
+        elif current_mode == GPIO.BOARD:
+            # BOARD mode already set (probably by RFID reader)
+            # Convert BCM pins to BOARD pins for our VCR pins
+            logger.warning("GPIO mode is BOARD, but VCR controller expects BCM pins")
+            logger.warning("VCR control may not work correctly with current GPIO mode")
+        elif current_mode == GPIO.BCM:
+            # BCM mode already set, perfect
+            logger.debug("GPIO mode already set to BCM")
+        
         GPIO.setup(Pins.VCR_PLAY, GPIO.OUT)
         GPIO.setup(Pins.VCR_EJECT, GPIO.OUT)
         

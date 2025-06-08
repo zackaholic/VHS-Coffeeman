@@ -1,0 +1,10 @@
+{
+  "vodka": 0,
+  "rum": 1,
+  "whiskey": 2,
+  "cranberry_juice": 3,
+  "orange_juice": 4,
+  "cola": 5,
+  "lime_juice": 6,
+  "simple_syrup": 7
+}

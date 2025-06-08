@@ -2,41 +2,243 @@
 recipe_loader.py - Recipe Management Module for VHS Coffeeman
 
 This module provides recipe loading and management functionality for the VHS Coffeeman system.
-It defines interfaces and basic infrastructure for recipe management that can be extended
-with specific recipe formats later.
+It implements a three-file JSON system for human-friendly recipe management.
 
 Classes:
-    RecipeLoader: Abstract interface for recipe loading
-    BasicRecipeLoader: Simple implementation for basic recipe support
-    Recipe: Generic recipe representation
+    RecipeLoader: New implementation using tapes.json, ingredients.json, and recipes.json
+    BasicRecipeLoader: Legacy implementation (kept for compatibility)
 
-The RecipeLoader interface handles:
-    - Loading recipes by RFID tag ID
-    - Caching and performance optimization
-    - Error handling for missing or invalid recipes
-    - Directory management for recipe files
+The new RecipeLoader uses three separate JSON files:
+    - tapes.json: Maps RFID tag IDs to movie names
+    - ingredients.json: Maps ingredient names to pump numbers  
+    - recipes.json: Maps movie names to ingredient recipes
 
 Usage:
-    from recipes.recipe_loader import BasicRecipeLoader
+    from recipes.recipe_loader import RecipeLoader
     
-    loader = BasicRecipeLoader()
-    recipe = loader.get_recipe_by_tag("12345678")
+    loader = RecipeLoader()
+    recipe = loader.get_recipe_by_tag_id("12345678")
     if recipe:
-        print(f"Found recipe: {recipe['name']}")
+        print(f"Recipe: {recipe}")  # [(pump_number, amount), ...]
 """
 
 import os
 import json
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
-from utils.logger import get_logger
+from typing import Dict, List, Optional, Any, Tuple
+from utils.logger import setup_logger
 
-logger = get_logger(__name__)
+logger = setup_logger(__name__)
 
 
-class RecipeLoader(ABC):
-    """Abstract interface for recipe loading."""
+class RecipeLoader:
+    """
+    Three-file JSON recipe management system.
+    
+    Uses separate JSON files for human-friendly recipe management:
+    - tapes.json: Maps RFID tag IDs to movie names
+    - ingredients.json: Maps ingredient names to pump numbers
+    - recipes.json: Maps movie names to ingredient recipes
+    """
+    
+    def __init__(self, tapes_file: str = "recipes/tapes.json", 
+                 ingredients_file: str = "recipes/ingredients.json", 
+                 recipes_file: str = "recipes/recipes.json"):
+        """
+        Initialize the recipe loader.
+        
+        Args:
+            tapes_file: Path to tapes mapping file
+            ingredients_file: Path to ingredients mapping file  
+            recipes_file: Path to recipes file
+        """
+        # Convert relative paths to absolute paths based on this file's location
+        if not os.path.isabs(tapes_file):
+            # For relative paths, use the directory containing this recipe_loader.py file
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.tapes_file = os.path.join(current_dir, tapes_file.replace("recipes/", ""))
+        else:
+            self.tapes_file = tapes_file
+            
+        if not os.path.isabs(ingredients_file):
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.ingredients_file = os.path.join(current_dir, ingredients_file.replace("recipes/", ""))
+        else:
+            self.ingredients_file = ingredients_file
+            
+        if not os.path.isabs(recipes_file):
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.recipes_file = os.path.join(current_dir, recipes_file.replace("recipes/", ""))
+        else:
+            self.recipes_file = recipes_file
+        
+        # Data storage
+        self.tapes: Dict[str, str] = {}
+        self.ingredients: Dict[str, int] = {}
+        self.recipes: Dict[str, Dict[str, float]] = {}
+        
+        logger.info(f"RecipeLoader initialized with files:")
+        logger.info(f"  Tapes: {self.tapes_file}")
+        logger.info(f"  Ingredients: {self.ingredients_file}")
+        logger.info(f"  Recipes: {self.recipes_file}")
+        
+        # Load all data
+        self.reload_files()
+    
+    def _load_json_file(self, file_path: str, description: str) -> Dict[str, Any]:
+        """
+        Load a JSON file with error handling.
+        
+        Args:
+            file_path: Path to the JSON file
+            description: Description for logging
+            
+        Returns:
+            Dictionary data or empty dict if file missing/invalid
+        """
+        try:
+            if not os.path.exists(file_path):
+                logger.warning(f"{description} file not found: {file_path}")
+                return {}
+            
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            logger.info(f"Loaded {description}: {len(data)} entries")
+            return data
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {description} file {file_path}: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Error loading {description} file {file_path}: {e}")
+            return {}
+    
+    def reload_files(self):
+        """Reload all JSON files."""
+        logger.info("Reloading recipe files...")
+        
+        self.tapes = self._load_json_file(self.tapes_file, "tapes")
+        self.ingredients = self._load_json_file(self.ingredients_file, "ingredients")
+        self.recipes = self._load_json_file(self.recipes_file, "recipes")
+        
+        logger.info(f"Recipe system loaded: {len(self.tapes)} tapes, {len(self.ingredients)} ingredients, {len(self.recipes)} recipes")
+    
+    def get_recipe_by_tag_id(self, tag_id: str) -> Optional[List[Tuple[int, float]]]:
+        """
+        Main method: converts tag_id to final recipe format.
+        
+        Args:
+            tag_id: RFID tag identifier
+            
+        Returns:
+            List of (pump_number, amount) tuples or None if any step fails
+        """
+        try:
+            logger.info(f"Looking up recipe for tag ID: {tag_id}")
+            
+            # Step 1: Get movie name from tag ID
+            movie_name = self.get_movie_name(tag_id)
+            if movie_name is None:
+                logger.warning(f"No movie found for tag ID: {tag_id}")
+                return None
+            
+            logger.info(f"Tag {tag_id} maps to movie: {movie_name}")
+            
+            # Step 2: Get recipe for movie
+            if movie_name not in self.recipes:
+                logger.warning(f"No recipe found for movie: {movie_name}")
+                return None
+            
+            recipe_ingredients = self.recipes[movie_name].get('ingredients', {})
+            if not recipe_ingredients:
+                logger.warning(f"Recipe for {movie_name} has no ingredients")
+                return None
+            
+            # Step 3: Validate recipe before translation
+            is_valid, missing = self.validate_recipe(movie_name)
+            if not is_valid:
+                logger.error(f"Recipe for {movie_name} has missing ingredients: {missing}")
+                return None
+            
+            # Step 4: Translate ingredients to pump numbers
+            pump_list = []
+            for ingredient_name, amount in recipe_ingredients.items():
+                if ingredient_name in self.ingredients:
+                    pump_number = self.ingredients[ingredient_name]
+                    pump_list.append((pump_number, amount))
+                    logger.debug(f"  {ingredient_name} -> pump {pump_number}, amount {amount}")
+                else:
+                    # This shouldn't happen due to validation, but safety check
+                    logger.error(f"Ingredient {ingredient_name} not found in ingredients map")
+                    return None
+            
+            logger.info(f"Recipe for {movie_name}: {len(pump_list)} ingredients")
+            return pump_list
+            
+        except Exception as e:
+            logger.error(f"Error getting recipe for tag {tag_id}: {e}")
+            return None
+    
+    def get_movie_name(self, tag_id: str) -> Optional[str]:
+        """
+        Get movie name for a tag ID.
+        
+        Args:
+            tag_id: RFID tag identifier
+            
+        Returns:
+            Movie name string or None if tag not found
+        """
+        return self.tapes.get(tag_id)
+    
+    def validate_recipe(self, movie_name: str) -> Tuple[bool, List[str]]:
+        """
+        Check if all recipe ingredients exist in ingredients.json.
+        
+        Args:
+            movie_name: Name of the movie to validate
+            
+        Returns:
+            Tuple of (is_valid: bool, missing_ingredients: list)
+        """
+        if movie_name not in self.recipes:
+            return False, [f"Recipe not found: {movie_name}"]
+        
+        recipe_ingredients = self.recipes[movie_name].get('ingredients', {})
+        missing_ingredients = []
+        
+        for ingredient_name in recipe_ingredients.keys():
+            if ingredient_name not in self.ingredients:
+                missing_ingredients.append(ingredient_name)
+        
+        is_valid = len(missing_ingredients) == 0
+        return is_valid, missing_ingredients
+    
+    def get_available_movies(self) -> List[str]:
+        """
+        Get list of movies that have both tape mapping and valid recipes.
+        
+        Returns:
+            List of movie names
+        """
+        available_movies = []
+        
+        # Get all movies that have tape mappings
+        mapped_movies = set(self.tapes.values())
+        
+        # Check which ones also have valid recipes
+        for movie_name in mapped_movies:
+            is_valid, _ = self.validate_recipe(movie_name)
+            if is_valid:
+                available_movies.append(movie_name)
+        
+        return sorted(available_movies)
+
+
+class LegacyRecipeLoader(ABC):
+    """Abstract interface for legacy recipe loading (for backward compatibility)."""
     
     @abstractmethod
     def get_recipe_by_tag(self, tag_id: str) -> Optional[Dict[str, Any]]:
@@ -67,7 +269,7 @@ class RecipeLoader(ABC):
         pass
 
 
-class BasicRecipeLoader(RecipeLoader):
+class BasicRecipeLoader(LegacyRecipeLoader):
     """Basic implementation of recipe loading with file-based storage."""
     
     def __init__(self, recipes_directory: str = None):

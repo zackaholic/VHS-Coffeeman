@@ -31,17 +31,17 @@ Usage:
 
 import time
 import threading
-from typing import Callable, Optional, Dict, Any
-from utils.logger import get_logger
+from typing import Callable, Optional, Dict, Any, List, Tuple
+from utils.logger import setup_logger
 from hardware.rfid_reader import RFIDReader
 from hardware.cup_sensor import CupSensor
 from hardware.grbl_interface import GRBLInterface
 from hardware.pump_controller import PumpController
 from hardware.vcr_controller import VCRController
 from media.video_player import VideoPlayer
-from recipes.recipe_loader import BasicRecipeLoader
+from recipes.recipe_loader import RecipeLoader, BasicRecipeLoader
 
-logger = get_logger(__name__)
+logger = setup_logger(__name__)
 
 
 class HardwareManager:
@@ -58,7 +58,7 @@ class HardwareManager:
         self.pump_controller = PumpController(self.grbl_interface)
         self.vcr_controller = VCRController()
         self.video_player = VideoPlayer()
-        self.recipe_loader = BasicRecipeLoader()
+        self.recipe_loader = RecipeLoader()
         
         # Event callbacks
         self.rfid_callback: Optional[Callable[[str], None]] = None
@@ -192,18 +192,52 @@ class HardwareManager:
         """Get a recipe by RFID tag ID."""
         try:
             logger.info(f"Looking up recipe for tag: {tag_id}")
-            recipe = self.recipe_loader.get_recipe_by_tag(tag_id)
             
-            if recipe:
-                logger.info(f"Found recipe: {recipe['name']}")
+            # Get movie name for logging
+            movie_name = self.recipe_loader.get_movie_name(tag_id)
+            
+            # Get the pump list from the new recipe system
+            pump_list = self.recipe_loader.get_recipe_by_tag_id(tag_id)
+            
+            if pump_list:
+                logger.info(f"Found recipe for {movie_name}: {len(pump_list)} ingredients")
+                
+                # Convert pump list back to legacy format for compatibility
+                recipe = self._pump_list_to_recipe_dict(tag_id, movie_name or f"Recipe {tag_id}", pump_list)
+                return recipe
             else:
                 logger.warning(f"No recipe found for tag: {tag_id}")
-            
-            return recipe
+                return None
             
         except Exception as e:
             logger.error(f"Error getting recipe for tag {tag_id}: {e}")
             return None
+    
+    def _pump_list_to_recipe_dict(self, tag_id: str, name: str, pump_list: List[Tuple[int, float]]) -> Dict[str, Any]:
+        """Convert pump list to legacy recipe dictionary format.
+        
+        Args:
+            tag_id: RFID tag ID
+            name: Recipe/movie name  
+            pump_list: List of (pump_number, amount) tuples
+            
+        Returns:
+            Recipe dictionary in legacy format
+        """
+        ingredients = []
+        for pump_number, amount in pump_list:
+            ingredients.append({
+                "pump": pump_number,
+                "amount": amount,
+                "name": f"Pump {pump_number}"  # Generic name for legacy compatibility
+            })
+        
+        return {
+            "name": name,
+            "tag_id": tag_id,
+            "description": f"Recipe for {name}",
+            "ingredients": ingredients
+        }
     
     def load_recipe(self, recipe_data: Dict[str, Any]) -> bool:
         """Load a recipe for dispensing."""

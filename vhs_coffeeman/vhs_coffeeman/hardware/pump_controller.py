@@ -1,7 +1,7 @@
 """Controller for managing pumps."""
 
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 import RPi.GPIO as GPIO
 
 from vhs_coffeeman.core.config import Pins, Constants
@@ -111,6 +111,50 @@ class PumpController:
             logger.error(f"Failed to dispense from pump {pump_index}")
         
         return result
+    
+    def execute_recipe(self, recipe_data: Dict[str, Any]) -> bool:
+        """Execute a complete recipe by dispensing all ingredients.
+        
+        Args:
+            recipe_data: Recipe dictionary with ingredients list
+            
+        Returns:
+            bool: True if all ingredients dispensed successfully
+        """
+        try:
+            ingredients = recipe_data.get('ingredients', [])
+            if not ingredients:
+                logger.error("Recipe has no ingredients")
+                return False
+            
+            logger.info(f"Executing recipe: {recipe_data.get('name', 'Unknown')}")
+            logger.info(f"Dispensing {len(ingredients)} ingredients")
+            
+            # Dispense each ingredient
+            for i, ingredient in enumerate(ingredients):
+                pump_index = ingredient.get('pump')
+                amount = ingredient.get('amount')
+                ingredient_name = ingredient.get('name', f'Ingredient {i+1}')
+                
+                if pump_index is None or amount is None:
+                    logger.error(f"Invalid ingredient data: {ingredient}")
+                    return False
+                
+                logger.info(f"Dispensing {ingredient_name}: {amount}oz from pump {pump_index}")
+                
+                # Dispense this ingredient
+                if not self.dispense(pump_index, amount):
+                    logger.error(f"Failed to dispense {ingredient_name}")
+                    return False
+                
+                logger.info(f"Successfully dispensed {ingredient_name}")
+            
+            logger.info("Recipe execution completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error executing recipe: {e}")
+            return False
     
     def run_pump(self, pump_index: int, direction: str, distance_mm: float) -> bool:
         """Run a pump manually in a specific direction.
