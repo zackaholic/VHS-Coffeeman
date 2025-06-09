@@ -25,7 +25,8 @@ import os
 import subprocess
 import threading
 import time
-from typing import Optional, Callable, Dict, Any
+import random
+from typing import Optional, Callable, Dict, Any, List
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -69,34 +70,70 @@ class VideoPlayer:
         self.completion_callback = callback
         logger.debug("Video completion callback set")
     
-    def get_video_file_for_tag(self, tag_id: str) -> Optional[str]:
+    def get_video_clips_for_movie(self, movie_name: str) -> List[str]:
         """
-        Get the video file path for a given RFID tag ID.
+        Get all video clips for a given movie from its folder.
         
         Args:
-            tag_id: The RFID tag identifier
+            movie_name: The movie name (folder name)
             
         Returns:
-            str: Path to video file, or None if not found
+            List[str]: List of video file paths, empty if none found
         """
-        # Look for video files with the tag ID as the filename
-        # Support common video formats
         video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv']
+        clips = []
         
-        for ext in video_extensions:
-            video_file = os.path.join(self.media_directory, f"{tag_id}{ext}")
-            if os.path.exists(video_file):
-                logger.debug(f"Found video file for tag {tag_id}: {video_file}")
-                return video_file
+        movie_folder = os.path.join(self.media_directory, movie_name)
         
-        # Also check for a default video
+        if not os.path.exists(movie_folder) or not os.path.isdir(movie_folder):
+            logger.debug(f"Movie folder not found: {movie_folder}")
+            return clips
+        
+        try:
+            for filename in os.listdir(movie_folder):
+                name, ext = os.path.splitext(filename)
+                
+                if ext.lower() in video_extensions:
+                    full_path = os.path.join(movie_folder, filename)
+                    if os.path.isfile(full_path):
+                        clips.append(full_path)
+            
+            logger.debug(f"Found {len(clips)} clips for movie '{movie_name}'")
+            
+        except Exception as e:
+            logger.error(f"Error listing clips for movie '{movie_name}': {e}")
+        
+        return clips
+
+    def get_video_file_for_tag(self, tag_id: str) -> Optional[str]:
+        """
+        Get a random video file path for a given RFID tag ID.
+        Looks for clips in a folder named after the movie.
+        
+        Args:
+            tag_id: The RFID tag identifier (movie name)
+            
+        Returns:
+            str: Path to randomly selected video file, or None if not found
+        """
+        # Primary: Get all clips for this movie folder
+        clips = self.get_video_clips_for_movie(tag_id)
+        
+        if clips:
+            # Randomly select one clip
+            selected_clip = random.choice(clips)
+            logger.info(f"Selected random clip for '{tag_id}': {os.path.basename(selected_clip)}")
+            return selected_clip
+        
+        # Fallback: Check for a default video
+        video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv']
         for ext in video_extensions:
             default_file = os.path.join(self.media_directory, f"default{ext}")
             if os.path.exists(default_file):
-                logger.info(f"Using default video for tag {tag_id}: {default_file}")
+                logger.info(f"No clips found for '{tag_id}', using default video: {default_file}")
                 return default_file
         
-        logger.warning(f"No video file found for tag {tag_id}")
+        logger.warning(f"No video file found for tag {tag_id} and no default video available")
         return None
     
     def play_video_for_tag(self, tag_id: str) -> bool:
@@ -121,42 +158,64 @@ class VideoPlayer:
             
             logger.info(f"Starting video playback: {video_file}")
             
-            # Start video playback using omxplayer (Raspberry Pi optimized)
-            # Note: omxplayer is deprecated, consider using vlc or mpv for newer Pi versions
-            command = [
-                'omxplayer',
-                '--no-osd',  # No on-screen display
-                '--aspect-mode', 'stretch',  # Stretch to fill screen
-                video_file
-            ]
+            # Try video players in order of preference: mpv -> VLC -> omxplayer
             
-            # Try omxplayer first, fall back to vlc
+            # First try mpv (lightweight, modern)
             try:
+                command = [
+                    'mpv',
+                    '--fullscreen',     # Fullscreen mode
+                    '--no-osc',         # No on-screen controls
+                    '--really-quiet',   # Minimal output
+                    video_file
+                ]
+                
                 self.current_process = subprocess.Popen(
                     command,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
                 )
+                logger.debug("Using mpv for video playback")
+                
             except FileNotFoundError:
                 # Fall back to VLC
-                logger.info("omxplayer not found, trying VLC")
-                command = [
-                    'vlc',
-                    '--intf', 'dummy',  # No interface
-                    '--play-and-exit',  # Exit when done
-                    '--fullscreen',     # Fullscreen mode
-                    video_file
-                ]
-                
+                logger.info("mpv not found, trying VLC")
                 try:
+                    command = [
+                        'vlc',
+                        '--play-and-exit',  # Exit when done
+                        '--fullscreen',     # Fullscreen mode
+                        video_file
+                    ]
+                    
                     self.current_process = subprocess.Popen(
                         command,
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     )
+                    logger.debug("Using VLC for video playback")
+                    
                 except FileNotFoundError:
-                    logger.error("Neither omxplayer nor VLC found for video playback")
-                    return False
+                    # Last resort: omxplayer (deprecated but might be available)
+                    logger.info("VLC not found, trying omxplayer")
+                    try:
+                        command = [
+                            'omxplayer',
+                            '--no-osd',  # No on-screen display
+                            '--aspect-mode', 'stretch',  # Stretch to fill screen
+                            video_file
+                        ]
+                        
+                        self.current_process = subprocess.Popen(
+                            command,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        logger.debug("Using omxplayer for video playback")
+                        
+                    except FileNotFoundError:
+                        logger.error("No video player found (tried mpv, VLC, omxplayer)")
+                        return False
             
             self.is_playing = True
             self.current_video_file = video_file
@@ -259,12 +318,12 @@ class VideoPlayer:
             "process_active": self.current_process is not None
         }
     
-    def list_available_videos(self) -> Dict[str, str]:
+    def list_available_videos(self) -> Dict[str, List[str]]:
         """
-        List all available video files in the media directory.
+        List all available video files organized by movie folders.
         
         Returns:
-            dict: Mapping of tag IDs to video file paths
+            dict: Mapping of movie names to lists of video file paths
         """
         videos = {}
         
@@ -272,6 +331,17 @@ class VideoPlayer:
             return videos
         
         try:
+            # First, scan for movie folders
+            for item in os.listdir(self.media_directory):
+                item_path = os.path.join(self.media_directory, item)
+                
+                if os.path.isdir(item_path):
+                    # This is a movie folder
+                    clips = self.get_video_clips_for_movie(item)
+                    if clips:
+                        videos[item] = clips
+            
+            # Also include direct video files (for backward compatibility)
             video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv']
             
             for filename in os.listdir(self.media_directory):
@@ -280,9 +350,12 @@ class VideoPlayer:
                 if ext.lower() in video_extensions:
                     full_path = os.path.join(self.media_directory, filename)
                     if os.path.isfile(full_path):
-                        videos[name] = full_path
+                        if name not in videos:
+                            videos[name] = []
+                        videos[name].append(full_path)
             
-            logger.debug(f"Found {len(videos)} video files")
+            total_clips = sum(len(clips) for clips in videos.values())
+            logger.debug(f"Found {len(videos)} movies with {total_clips} total clips")
             
         except Exception as e:
             logger.error(f"Error listing video files: {e}")

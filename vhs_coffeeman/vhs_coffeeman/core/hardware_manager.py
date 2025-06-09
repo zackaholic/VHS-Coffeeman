@@ -76,7 +76,7 @@ class HardwareManager:
         self.grbl_interface = GRBLInterface()
         self.pump_controller = PumpController(self.grbl_interface)
         self.vcr_controller = VCRController()
-        self.video_player = VideoPlayer()
+        self.video_player = VideoPlayer(media_directory="media")
         self.recipe_loader = RecipeLoader()
         
         # Event callbacks
@@ -367,9 +367,14 @@ class HardwareManager:
             logger.error(f"Error triggering VCR play: {e}")
     
     def eject_vcr(self):
-        """Trigger VCR eject button."""
+        """Trigger VCR eject button and stop video playback."""
         try:
             logger.info("Triggering VCR eject")
+            
+            # Stop video playback to maintain VHS illusion
+            self.stop_video()
+            
+            # Eject the physical tape
             self.vcr_controller.eject()
             
         except Exception as e:
@@ -379,7 +384,15 @@ class HardwareManager:
         """Start video playback for the given tag ID."""
         try:
             logger.info(f"Starting video for tag: {tag_id}")
-            return self.video_player.play_video_for_tag(tag_id)
+            
+            # Convert RFID tag ID to movie name
+            movie_name = self.recipe_loader.get_movie_name(tag_id)
+            if not movie_name:
+                logger.warning(f"No movie name found for tag {tag_id}")
+                return False
+            
+            logger.info(f"Tag {tag_id} maps to movie: {movie_name}")
+            return self.video_player.play_video_for_tag(movie_name)
             
         except Exception as e:
             logger.error(f"Error starting video for tag {tag_id}: {e}")

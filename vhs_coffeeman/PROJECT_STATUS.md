@@ -76,10 +76,12 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
   - Sample recipes created for testing (Taxi Driver, Blade Runner, The Big Lebowski, Casablanca)
 
 - [x] **Media Playback**
-  - Complete video player module with tag-based media coordination
-  - Support for multiple video formats and players (omxplayer/VLC)
+  - Complete video player module with folder-based random clip selection
+  - Support for multiple video formats and players (mpv/VLC/omxplayer with automatic fallback)
   - Video playback starts when pouring begins for dramatic timing
+  - Video stops on tape eject to maintain VHS illusion
   - Independent video operation (failures don't stop drink making)
+  - End-to-end RFID tag to video integration working perfectly
 
 - [x] **Cup Sensor Integration**
   - VCNL4010 proximity sensor module created
@@ -157,22 +159,15 @@ We are migrating the project from an RP2040 microcontroller to a Raspberry Pi pl
 
 ## Remaining Tasks
 
-- [ ] **🎯 NEXT MILESTONE: Dry Pour Testing** 
-  - Test complete drink dispensing sequence without liquids
-  - Validate timing and coordination between components
-  - Test error handling and recovery scenarios
-  - Test full state machine workflow: RFID → recipe lookup → cup detection → recipe execution → VCR eject → reset
-  - **This is the next major milestone before liquid testing**
-
 - [ ] **LED Control System Implementation**
   - Implement actual LED hardware control (placeholder functions exist)
   - Add LED configuration to hardware setup
   - Create test scripts for LED functionality
 
-- [ ] **Video Playback Integration**
-  - Test video player with actual media files
-  - Coordinate video playback timing with drink dispensing
-  - Implement media file organization and selection
+- [ ] **System Polish and Optimization**
+  - Fine-tune video and hardware coordination timing
+  - Optimize performance for smooth user experience
+  - Test edge cases and error recovery scenarios
 
 - [ ] **Maintenance Utilities**
   - Create command-line maintenance tools
@@ -263,12 +258,22 @@ The VHS Coffeeman system now has a complete, production-ready implementation:
 - ✅ **Hardware optimization**: Cup sensor stability improvements and conditional polling
 - ✅ **Pump calibration**: Working dispensing with adjustable oz/mm ratios
 
-## 🎯 Next Major Milestone: Video Playback Integration
+## ✅ Major Milestone Complete: Video Playback Integration SUCCESS
 
-With the core system proven, the focus now shifts to **video playback integration** and final system calibration:
+**COMPLETED**: Video playback integration has been **successfully implemented and tested**! The system now provides a complete VHS experience:
 
-- **Media file organization**: Structure video files for tag-based selection
-- **Video timing coordination**: Sync playback with drink dispensing
-- **Multi-format support**: Test omxplayer/VLC compatibility
-- **Error handling**: Independent video operation (failures don't stop drink making)
-- **Final calibration**: Precise pump timing and user experience refinement
+- ✅ **Folder-based random clip selection**: Multiple clips per movie with random selection for varied experiences
+- ✅ **Complete RFID-to-video pipeline**: Tag ID → Movie name → Random clip selection working flawlessly
+- ✅ **Multi-player support**: Automatic fallback mpv → VLC → omxplayer with optimal player selection
+- ✅ **VHS illusion maintained**: Video stops on tape eject for authentic VHS experience
+- ✅ **Error handling**: Graceful fallbacks with default video support
+- ✅ **End-to-end integration**: Video timing perfectly coordinated with drink dispensing workflow
+
+## 🎯 Next Major Milestone: System Refinement and LED Control
+
+With both the core dispensing system and video playback proven, the focus now shifts to **final system polish**:
+
+- **LED Control Implementation**: Complete the visual feedback system with proper LED patterns
+- **System calibration**: Fine-tune pump timing and user experience
+- **Performance optimization**: Optimize video and hardware coordination
+- **Production preparation**: Final testing and deployment readiness
